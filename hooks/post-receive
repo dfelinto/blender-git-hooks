@@ -1,0 +1,29 @@
+#!/bin/bash
+# https://github.com/dfelinto/blender-git-hooks
+
+INPUT=view3d_forensic_reconstruction
+FTP=/var/www/ftp
+DOMAIN_FTP="http://www.dalaifelinto.com/ftp"
+DEPLOY_BLENDER_ADDON="${HOME}/bin/deploy-blender-addon"
+# get the script deploy-blender-addon from the same repository
+
+# Blender Addon Deployment Git-Hook
+#
+# this hook runs in the server and will create a .zip with the
+# addon ready to be installed in Blender
+#
+# All the python files (but __init__.py) are compiled into .pyc
+
+echo "Post-commit deploying hook"
+
+# post-receive
+
+while read oldrev newrev ref
+do
+  if [[ $ref =~ .*/master$ ]];
+  then
+    exec $DEPLOY_BLENDER_ADDON $INPUT $FTP $DOMAIN_FTP
+  else
+    echo "Ref $ref successfully received. No hook for non-master commits"
+  fi
+done

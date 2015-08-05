@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Blender Addon Deployment Git-Hook
+#
+# this hook runs in the server and will create a .zip with the
+# addon ready to be installed in Blender
+#
+# All the python files (but __init__.py) are compiled into .pyc
+
+INPUT=$1
+FTP=$2
+DOMAIN_FTP=$3
+OUTPUT=${INPUT}.zip
+
+# for *.py that is not __init__.py compile it and add to zip
+
+TEMP_ZIP=/tmp/forensic-reconstruction.zip
+TEMP_DIR=/tmp/forensic-reconstruction
+
+# get a snapshot of source code
+
+git archive HEAD --format=zip > $TEMP_ZIP
+unzip $TEMP_ZIP -d $TEMP_DIR
+
+
+# compile all the python files
+
+GIT_TEMP=${TEMP_DIR}/${INPUT}
+
+files=`find $GIT_TEMP -name *.py | grep -v __init__.py`
+
+for file in $files; do python3 -m compileall $file; done
+for file in $files; do mv `echo ${file:0:${#file}-3}.cpython-34.pyc | sed 's/\(.*\/\)\(.*\)\.pyc/\1__pycache__\/\2.pyc/'` ${file:0:${#file}-3}.pyc; done
+for file in $files; do rm $file; done
+
+find $GIT_TEMP -name __pycache__ | xargs rm -rf
+
+if [ -f "${FTP}/${OUTPUT}" ]; then
+  rm "${FTP}/${OUTPUT}"
+fi
+
+
+# store the zip in the ftp server
+
+cd $TEMP_DIR
+zip -r9 ${FTP}/${OUTPUT} $INPUT
+
+
+# cleanup
+
+rm -rf $TEMP_ZIP
+rm -rf $TEMP_DIR
+
+echo "File available in: ${DOMAIN_FTP}/${OUTPUT}"
